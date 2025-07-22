@@ -1,0 +1,61 @@
+# 설치 프로세스
+uv init api-server
+uv venv
+source .venv/bin/activate
+uv add dotenv fastapi pydantic mysql-connector-python
+
+# uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+
+# 예시 1
+curl -X POST "http://localhost:8000/analysis" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "models": ["deepseek-r1", "gpt-4o", "claude-3.5-sonnet"],
+    "benchmarks": ["ds-mmlu"],
+    "metadata_level": ["difficulty", "subject"]
+  }'
+# 예시 2
+curl -X POST "http://localhost:8000/analysis" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "models": ["deepseek-r1", "gpt-4o"],
+    "benchmarks": ["mmlu-pro"],
+    "metadata_level": {
+      "mmlu-pro": ["difficulty", "subject"]
+    }
+  }'
+# 예시 3
+curl -X POST "http://localhost:8000/analysis" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "models": ["deepseek-r1", "qwen-max"],
+    "benchmarks": ["ds-mmlu", "hle"],
+    "metadata_level": {
+      "ds-mmlu": ["difficulty", "subject"],
+      "hle": ["category"],
+    }
+  }'
+# 예시 4
+curl -X POST "http://localhost:8000/analysis" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "models": ["deepseek-r1", "gpt-4o", "claude-3.5-sonnet", "qwen-max"],
+    "benchmarks": ["aime", "hle"],
+    "metadata_level": {}
+  }'
+
+`// GET으로 하려면 이렇게 해야 함 (불가능)
+GET /analysis?models=deepseek-r1,claude-3.5-sonnet&benchmark=mmlu&level1=difficulty,category&level2=subject
+
+// POST로 깔끔하게 (POST는 생성/수정으로 쓰이지만, 복잡한 DB 조회에도 쓰임.)
+POST /analysis
+{
+  "models": ["deepseek-r1", "claude-3.5-sonnet"],
+  "benchmark": "mmlu", 
+  "metadata_level1": ["difficulty", "category"],
+  "metadata_level2": ["subject"]
+}
+
+단순 조회 → GET
+복잡한 조회 → POST (업계 관례)
