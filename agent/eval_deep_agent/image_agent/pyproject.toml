@@ -1,0 +1,14 @@
+[project]
+name = "image-generation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "asyncio>=3.4.3",
+    "fastmcp>=2.10.6",
+    "matplotlib>=3.10.3",
+    "pandas>=2.3.1",
+    "requests>=2.32.4",
+    "seaborn>=0.13.2",
+]

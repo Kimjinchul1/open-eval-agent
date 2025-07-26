@@ -1,0 +1,6 @@
+fastmcp
+pandas
+matplotlib
+seaborn
+requests
+asyncio
