@@ -60,42 +60,43 @@ class JSONToMySQLMigrator:
             'mmlu-pro': 'mmlu_pro_results',
             'math500': 'math500_results',
             'ds-mmlu': 'ds_mmlu_results',
-            'hle': 'hle_results'
+            'ds_mmlu': 'ds_mmlu_results',
+            'hle': 'hle_results',
+            'gpqa': 'gpqa_results'
         }
         return table_mapping.get(benchmark, f"{benchmark}_results")
 
     def prepare_data_for_insert(self, data: Dict[str, Any], benchmark: str, model_name: str) -> tuple:
         """ 데이터를 MySQL INSERT용으로 변환"""
 
+        # data_id 처리 - ID 필드에서 가져오기
+        data_id = data.get('ID', data.get('id', '0'))
+            
         base_data = {
-            'data_id': data.get('id', 0),
+            'data_id': data_id,
             'model_name': model_name,
             'question': data.get('question', ''),
-            'answer': str(data.get('Answer','')),
+            'answer': str(data.get('answer', data.get('Answer',''))),
             'response': data.get('response', ''),
             'filtered_resps': str(data.get('filtered_resps', '')),
             'match_score': float(data.get('match', '0.0')),
             'difficulty': data.get('Difficulty','Medium'),
-            'business_category': data.get('business', '') # 오타 유지
+            'business_category': data.get('business', ''), # 오타 유지
+            'user_prompt0': data.get('user_prompt0', '')
         }
 
         # 벤치마크별 특화 데이터 추가
         if benchmark == 'aime':
-            specific_data = {
-                'competition_year': data.get('competition_year'),
-                'problem_number': data.get('problem_number'),
-                'solution_steps': data.get('solution_steps')
-            }
-            columns = list(base_data.keys()) + list(specific_data.keys())
-            values = list(base_data.values()) + list(specific_data.values())
+            columns = list(base_data.keys())
+            values = list(base_data.values())
             
         elif benchmark in ['mmlu', 'mmlu-redux']:
             specific_data = {
-                'choice_a': data.get('A', ''),
-                'choice_b': data.get('B', ''),
-                'choice_c': data.get('C', ''),
-                'choice_d': data.get('D', ''),
-                'subject': data.get('subject', ''),
+                'choice_a': data.get('A', data.get('example_A', '')),
+                'choice_b': data.get('B', data.get('example_B', '')),
+                'choice_c': data.get('C', data.get('example_C', '')),
+                'choice_d': data.get('D', data.get('example_D', '')),
+                'subject': data.get('subject', data.get('raw_subject', '')),
                 'category': data.get('category', '')
             }
             
@@ -109,11 +110,11 @@ class JSONToMySQLMigrator:
             
         elif benchmark == 'mmlu-pro':
             specific_data = {
-                'choice_a': data.get('A', ''),
-                'choice_b': data.get('B', ''),
-                'choice_c': data.get('C', ''),
-                'choice_d': data.get('D', ''),
-                'subject': data.get('subject', ''),
+                'choice_a': data.get('A', data.get('example_A', '')),
+                'choice_b': data.get('B', data.get('example_B', '')),
+                'choice_c': data.get('C', data.get('example_C', '')),
+                'choice_d': data.get('D', data.get('example_D', '')),
+                'subject': data.get('subject', data.get('raw_subject', '')),
                 'category': data.get('category', ''),
                 'complexity': data.get('complexity', ''),
                 'interdisciplinary': data.get('interdisciplinary', '')
@@ -123,25 +124,25 @@ class JSONToMySQLMigrator:
             
         elif benchmark == 'math500':
             specific_data = {
-                'choice_a': data.get('A'),
-                'choice_b': data.get('B'),
-                'choice_c': data.get('C'),
-                'choice_d': data.get('D'),
-                'topic': data.get('topic', ''),
-                'level': data.get('level', ''),
+                'choice_a': data.get('A', data.get('example_A')),
+                'choice_b': data.get('B', data.get('example_B')),
+                'choice_c': data.get('C', data.get('example_C')),
+                'choice_d': data.get('D', data.get('example_D')),
+                'topic': data.get('topic', data.get('subject', '')),
+                'level': str(data.get('level', '')),
                 'proof_required': data.get('proof_required'),
                 'theorem_dependency': data.get('theorem_dependency', '')
             }
             columns = list(base_data.keys()) + list(specific_data.keys())
             values = list(base_data.values()) + list(specific_data.values())
             
-        elif benchmark == 'ds-mmlu':
+        elif benchmark in ['ds-mmlu', 'ds_mmlu']:
             specific_data = {
-                'choice_a': data.get('A', ''),
-                'choice_b': data.get('B', ''),
-                'choice_c': data.get('C', ''),
-                'choice_d': data.get('D', ''),
-                'subject': data.get('subject', ''),
+                'choice_a': data.get('A', data.get('example_A', '')),
+                'choice_b': data.get('B', data.get('example_B', '')),
+                'choice_c': data.get('C', data.get('example_C', '')),
+                'choice_d': data.get('D', data.get('example_D', '')),
+                'subject': data.get('subject', data.get('raw_subject', '')),
                 'category': data.get('category', 'Semiconductor Engineering'),
                 'industry_relevance': data.get('industry_relevance', '')
             }
@@ -150,21 +151,33 @@ class JSONToMySQLMigrator:
             
         elif benchmark == 'hle':
             specific_data = {
-                'choice_a': data.get('A'),
-                'choice_b': data.get('B'),
-                'choice_c': data.get('C'),
-                'choice_d': data.get('D'),
-                'choice_e': data.get('E'),
-                'choice_f': data.get('F'),
-                'choice_g': data.get('G'),
-                'choice_h': data.get('H'),
-                'choice_i': data.get('I'),
-                'choice_j': data.get('J'),
-                'category': data.get('category', ''),
+                'choice_a': data.get('A', data.get('example_A')),
+                'choice_b': data.get('B', data.get('example_B')),
+                'choice_c': data.get('C', data.get('example_C')),
+                'choice_d': data.get('D', data.get('example_D')),
+                'choice_e': data.get('E', data.get('example_E')),
+                'choice_f': data.get('F', data.get('example_F')),
+                'choice_g': data.get('G', data.get('example_G')),
+                'choice_h': data.get('H', data.get('example_H')),
+                'choice_i': data.get('I', data.get('example_I')),
+                'choice_j': data.get('J', data.get('example_J')),
+                'category': data.get('category', data.get('raw_subject', '')),
                 'complexity': data.get('complexity', 'Ultimate'),
                 'philosophical_domain': data.get('philosophical_domain', ''),
                 'consensus_level': data.get('consensus_level', ''),
                 'complexity_breakdown': json.dumps(data.get('complexity_breakdown', {}))
+            }
+            columns = list(base_data.keys()) + list(specific_data.keys())
+            values = list(base_data.values()) + list(specific_data.values())
+            
+        elif benchmark == 'gpqa':
+            specific_data = {
+                'choice_a': data.get('A', data.get('example_A', '')),
+                'choice_b': data.get('B', data.get('example_B', '')),
+                'choice_c': data.get('C', data.get('example_C', '')),
+                'choice_d': data.get('D', data.get('example_D', '')),
+                'subject': data.get('subject', data.get('raw_subject', '')),
+                'category': data.get('category', '')
             }
             columns = list(base_data.keys()) + list(specific_data.keys())
             values = list(base_data.values()) + list(specific_data.values())
@@ -287,7 +300,7 @@ def main():
     try:
         # 데이터 이관
         print("JSON 파일 이관을 시작합니다...")
-        migrator.migrate_all_files('/home/kimhc/open_deep_research/database/our_results')
+        migrator.migrate_all_files('/home/kimhc/deep_eval_agent_project/database/data/real_data/model_response')
 
         print("\n이관 결과를 검증합니다...")
         migrator.verify_migration()
